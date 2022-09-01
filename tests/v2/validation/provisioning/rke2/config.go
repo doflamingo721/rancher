@@ -1,4 +1,4 @@
-package provisioning
+package rke2
 
 import (
 	"github.com/rancher/rancher/tests/framework/extensions/machinepools"
