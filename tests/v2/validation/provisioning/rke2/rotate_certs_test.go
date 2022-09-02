@@ -1,7 +1,9 @@
 package rke2
 
 import (
+	"context"
 	"fmt"
+	"testing"
 
 	"github.com/rancher/rancher/tests/framework/clients/rancher"
 	"github.com/rancher/rancher/tests/framework/extensions/cloudcredentials"
@@ -9,8 +11,13 @@ import (
 	"github.com/rancher/rancher/tests/framework/extensions/machinepools"
 	"github.com/rancher/rancher/tests/framework/pkg/config"
 	"github.com/rancher/rancher/tests/framework/pkg/session"
+	"github.com/rancher/rancher/tests/framework/pkg/wait"
+	"github.com/rancher/rancher/tests/integration/pkg/defaults"
+	provisioning "github.com/rancher/rancher/tests/v2/validation/provisioning"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type CertRotationTestSuite struct {
@@ -22,9 +29,9 @@ type CertRotationTestSuite struct {
 	namespace   string
 }
 
-func (p *CertRotationTestSuite) TearDownSuite() {
-	p.session.Cleanup()
-}
+// func (p *CertRotationTestSuite) TearDownSuite() {
+// 	p.session.Cleanup()
+// }
 
 func (r *CertRotationTestSuite) SetupSuite() {
 	testSession := session.NewSession(r.T())
@@ -51,7 +58,7 @@ func (r *CertRotationTestSuite) TestCertRotationFreshCluster(provider Provider, 
 		testSessionClient, err := r.client.WithSession(testSession)
 		require.NoError(r.T(), err)
 
-		clusterName := AppendRandomString(fmt.Sprintf("%s-%s", r.clusterName, provider.Name))
+		clusterName := provisioning.AppendRandomString(fmt.Sprintf("%s-%s", r.clusterName, provider.Name))
 		generatedPoolName := fmt.Sprintf("nc-%s-pool1-", clusterName)
 		machinePoolConfig := provider.MachinePoolFunc(generatedPoolName, namespace)
 
@@ -62,9 +69,30 @@ func (r *CertRotationTestSuite) TestCertRotationFreshCluster(provider Provider, 
 
 		cluster := clusters.NewRKE2ClusterConfig(clusterName, namespace, "calico", credential.ID, kubeVersion, machinePools)
 
-		// clusterResp, err := clusters.CreateRKE2Cluster(testSessionClient, cluster)
-		// require.NoError(r.T(), err)
-		clusters.CreateRKE2Cluster(testSessionClient, cluster)
+		//clusters.CreateRKE2Cluster(testSessionClient, cluster)
+
+		clusterResp, err := clusters.CreateRKE2Cluster(testSessionClient, cluster)
+		require.NoError(r.T(), err)
+
+		kubeRKEClient, err := r.client.GetKubeAPIRKEClient()
+		require.NoError(r.T(), err)
+
+		result, err := kubeRKEClient.RKEControlPlanes(namespace).Watch(context.TODO(), metav1.ListOptions{
+
+			FieldSelector:  "metadata.name=" + cluster.ID,
+			TimeoutSeconds: &defaults.WatchTimeoutSeconds,
+		})
+		require.NoError(r.T(), err)
+
+		checkFunc := clusters.IsProvisioningClusterReady
+
+		err = wait.WatchWait(result, checkFunc)
+		assert.NoError(r.T(), err)
+		assert.Equal(r.T(), clusterName, clusterResp.ObjectMeta.Name)
 
 	})
+}
+
+func TestCertRotationSuite(t *testing.T) {
+	suite.Run(t, new(CertRotationTestSuite))
 }
