@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/rancher/rancher/tests/framework/clients/rancher"
 	management "github.com/rancher/rancher/tests/framework/clients/rancher/generated/management/v3"
@@ -37,9 +38,9 @@ type RKE2NodeDriverProvisioningTestSuite struct {
 	providers          []string
 }
 
-func (r *RKE2NodeDriverProvisioningTestSuite) TearDownSuite() {
-	r.session.Cleanup()
-}
+// func (r *RKE2NodeDriverProvisioningTestSuite) TearDownSuite() {
+// 	r.session.Cleanup()
+// }
 
 func (r *RKE2NodeDriverProvisioningTestSuite) SetupSuite() {
 	testSession := session.NewSession(r.T())
@@ -79,6 +80,7 @@ func (r *RKE2NodeDriverProvisioningTestSuite) SetupSuite() {
 }
 
 func (r *RKE2NodeDriverProvisioningTestSuite) ProvisioningRKE2Cluster(provider Provider) {
+	// time.Sleep(10000000000000)
 	providerName := " Node Provider: " + provider.Name
 	nodeRoles0 := []machinepools.NodeRoles{
 		{
@@ -130,53 +132,54 @@ func (r *RKE2NodeDriverProvisioningTestSuite) ProvisioningRKE2Cluster(provider P
 		require.NoError(r.T(), err)
 
 		cloudCredential, err := provider.CloudCredFunc(client)
+		fmt.Println("cloud-creds", cloudCredential)
+		fmt.Println("k8s version", r.kubernetesVersions)
 		require.NoError(r.T(), err)
-		for _, kubeVersion := range r.kubernetesVersions {
-			name = tt.name + providerName + " Kubernetes version: " + kubeVersion
-			for _, cni := range r.cnis {
-				name += " cni: " + cni
-				r.Run(name, func() {
-					testSession := session.NewSession(r.T())
-					defer testSession.Cleanup()
+		kubeVersion := "1.24.2-rancher1-1"
+		name = tt.name + providerName + " Kubernetes version: " + kubeVersion
+		cni := "calico"
+		name += " cni: " + cni
+		r.Run(name, func() {
+			testSession := session.NewSession(r.T())
+			defer testSession.Cleanup()
 
-					testSessionClient, err := tt.client.WithSession(testSession)
-					require.NoError(r.T(), err)
+			testSessionClient, err := tt.client.WithSession(testSession)
+			require.NoError(r.T(), err)
 
-					clusterName := provisioning.AppendRandomString(provider.Name)
-					generatedPoolName := fmt.Sprintf("nc-%s-pool1-", clusterName)
-					machinePoolConfig := provider.MachinePoolFunc(generatedPoolName, namespace)
+			clusterName := provisioning.AppendRandomString(provider.Name)
+			fmt.Println(clusterName)
+			generatedPoolName := fmt.Sprintf("nc-%s-pool1-", clusterName)
+			machinePoolConfig := provider.MachinePoolFunc(generatedPoolName, namespace)
 
-					machineConfigResp, err := machinepools.CreateMachineConfig(provider.MachineConfig, machinePoolConfig, testSessionClient)
-					require.NoError(r.T(), err)
+			machineConfigResp, err := machinepools.CreateMachineConfig(provider.MachineConfig, machinePoolConfig, testSessionClient)
+			require.NoError(r.T(), err)
 
-					machinePools := machinepools.RKEMachinePoolSetup(tt.nodeRoles, machineConfigResp)
+			machinePools := machinepools.RKEMachinePoolSetup(tt.nodeRoles, machineConfigResp)
 
-					cluster := clusters.NewRKE2ClusterConfig(clusterName, namespace, cni, cloudCredential.ID, kubeVersion, machinePools)
+			cluster := clusters.NewRKE2ClusterConfig(clusterName, namespace, cni, cloudCredential.ID, kubeVersion, machinePools)
 
-					clusterResp, err := clusters.CreateRKE2Cluster(testSessionClient, cluster)
-					require.NoError(r.T(), err)
+			clusterResp, err := clusters.CreateRKE2Cluster(testSessionClient, cluster)
+			require.NoError(r.T(), err)
+			// time.Sleep(60000000000000)
+			kubeProvisioningClient, err := r.client.GetKubeAPIProvisioningClient()
+			require.NoError(r.T(), err)
 
-					kubeProvisioningClient, err := r.client.GetKubeAPIProvisioningClient()
-					require.NoError(r.T(), err)
+			result, err := kubeProvisioningClient.Clusters(namespace).Watch(context.TODO(), metav1.ListOptions{
+				FieldSelector:  "metadata.name=" + clusterName,
+				TimeoutSeconds: &defaults.WatchTimeoutSeconds,
+			})
+			require.NoError(r.T(), err)
 
-					result, err := kubeProvisioningClient.Clusters(namespace).Watch(context.TODO(), metav1.ListOptions{
-						FieldSelector:  "metadata.name=" + clusterName,
-						TimeoutSeconds: &defaults.WatchTimeoutSeconds,
-					})
-					require.NoError(r.T(), err)
+			checkFunc := clusters.IsProvisioningClusterReady
 
-					checkFunc := clusters.IsProvisioningClusterReady
+			err = wait.WatchWait(result, checkFunc)
+			assert.NoError(r.T(), err)
+			assert.Equal(r.T(), clusterName, clusterResp.ObjectMeta.Name)
 
-					err = wait.WatchWait(result, checkFunc)
-					assert.NoError(r.T(), err)
-					assert.Equal(r.T(), clusterName, clusterResp.ObjectMeta.Name)
-
-					clusterToken, err := clusters.CheckServiceAccountTokenSecret(client, clusterName)
-					require.NoError(r.T(), err)
-					assert.NotEmpty(r.T(), clusterToken)
-				})
-			}
-		}
+			clusterToken, err := clusters.CheckServiceAccountTokenSecret(client, clusterName)
+			require.NoError(r.T(), err)
+			assert.NotEmpty(r.T(), clusterToken)
+		})
 	}
 }
 
@@ -285,7 +288,7 @@ func (r *RKE2NodeDriverProvisioningTestSuite) ProvisioningRKE2CNICluster(provide
 	var name string
 	for _, tt := range tests {
 		subSession := r.session.NewSession()
-		defer subSession.Cleanup()
+		// defer subSession.Cleanup()
 
 		client, err := tt.client.WithSession(subSession)
 		require.NoError(r.T(), err)
@@ -316,6 +319,7 @@ func (r *RKE2NodeDriverProvisioningTestSuite) ProvisioningRKE2CNICluster(provide
 					clusterResp, err := clusters.CreateRKE2Cluster(testSessionClient, cluster)
 					require.NoError(r.T(), err)
 
+					time.Sleep(60000000000000)
 					kubeProvisioningClient, err := r.client.GetKubeAPIProvisioningClient()
 					require.NoError(r.T(), err)
 
@@ -346,10 +350,13 @@ func (r *RKE2NodeDriverProvisioningTestSuite) ProvisioningRKE2CNICluster(provide
 }
 
 func (r *RKE2NodeDriverProvisioningTestSuite) TestProvisioning() {
-	for _, providerName := range r.providers {
-		provider := CreateProvider(providerName)
-		r.ProvisioningRKE2Cluster(provider)
-	}
+	// time.Sleep(6000000000000)
+	// for _, providerName := range r.providers {
+	// 	provider := CreateProvider(providerName)
+	// 	r.ProvisioningRKE2Cluster(provider)
+	// }
+	provider := CreateProvider("aws")
+	r.ProvisioningRKE2Cluster(provider)
 }
 
 func (r *RKE2NodeDriverProvisioningTestSuite) TestProvisioningDynamicInput() {

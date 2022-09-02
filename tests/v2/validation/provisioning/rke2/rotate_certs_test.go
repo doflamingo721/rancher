@@ -67,7 +67,7 @@ func (r *CertRotationTestSuite) TestCertRotationFreshCluster(provider Provider, 
 
 		machinePools := machinepools.RKEMachinePoolSetup(nodesAndRoles, machineConfigResp)
 
-		cluster := clusters.NewRKE2ClusterConfig(clusterName, namespace, "calico", credential.ID, kubeVersion, machinePools)
+		cluster := clusters.NewRKE2ClusterConfig(clusterName, namespace, "calico", "cc-2rrgf", "v1.24.2-rancher1-1", machinePools)
 
 		//clusters.CreateRKE2Cluster(testSessionClient, cluster)
 
