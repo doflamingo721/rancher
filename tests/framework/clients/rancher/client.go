@@ -12,11 +12,12 @@ import (
 	"github.com/rancher/norman/httperror"
 	frameworkDynamic "github.com/rancher/rancher/tests/framework/clients/dynamic"
 	"github.com/rancher/rancher/tests/framework/clients/ec2"
+	kubeProvisioning "github.com/rancher/rancher/tests/framework/clients/provisioning"
 	"github.com/rancher/rancher/tests/framework/clients/rancher/catalog"
 	management "github.com/rancher/rancher/tests/framework/clients/rancher/generated/management/v3"
 	provisioning "github.com/rancher/rancher/tests/framework/clients/rancher/generated/provisioning/v1"
-
-	kubeProvisioning "github.com/rancher/rancher/tests/framework/clients/provisioning"
+	rke "github.com/rancher/rancher/tests/framework/clients/rancher/generated/rke/v1"
+	kubeRKE "github.com/rancher/rancher/tests/framework/clients/rke"
 	"github.com/rancher/rancher/tests/framework/pkg/clientbase"
 	"github.com/rancher/rancher/tests/framework/pkg/config"
 	"github.com/rancher/rancher/tests/framework/pkg/session"
@@ -35,6 +36,8 @@ type Client struct {
 	Management *management.Client
 	// Client used to access provisioning.cattle.io v1 API resources (clusters)
 	Provisioning *provisioning.Client
+	// Client used to access rke.cattle.io v1 API resources (clusters)
+	RKE *rke.Client
 	// Client used to access catalog.cattle.io v1 API resources (apps, charts, etc.)
 	Catalog *catalog.Client
 	// Config used to test against a rancher instance
@@ -77,6 +80,13 @@ func NewClient(bearerToken string, session *session.Session) (*Client, error) {
 	}
 
 	c.Provisioning.Ops.Session = session
+
+	c.RKE, err = rke.NewClient(clientOptsV1(restConfig, c.RancherConfig))
+	if err != nil {
+		return nil, err
+	}
+
+	c.RKE.Ops.Session = session
 
 	catalogClient, err := catalog.NewForConfig(restConfig, session)
 	if err != nil {
@@ -210,6 +220,16 @@ func (c *Client) GetKubeAPIProvisioningClient() (*kubeProvisioning.Client, error
 	}
 
 	return provClient, nil
+}
+
+// GetKubeAPIRKEClient is a function that instantiates a rke client that communicates with the Kube API of a cluster
+func (c *Client) GetKubeAPIRKEClient() (*kubeRKE.Client, error) {
+	rkeClient, err := kubeRKE.NewForConfig(c.restConfig, c.Session)
+	if err != nil {
+		return nil, err
+	}
+
+	return rkeClient, nil
 }
 
 // GetDownStreamClusterClient is a helper function that instantiates a dynamic client to communicate with a specific cluster.
