@@ -99,67 +99,65 @@ func (c *CustomClusterProvisioningTestSuite) ProvisioningRKE2CustomCluster(exter
 	}
 	var name string
 	for _, tt := range tests {
-		for _, kubeVersion := range c.kubernetesVersions {
-			name = tt.name + " Kubernetes version: " + kubeVersion
-			for _, cni := range c.cnis {
-				name += " cni: " + cni
-				c.Run(name, func() {
-					testSession := session.NewSession(c.T())
-					defer testSession.Cleanup()
+		kubeVersion := "1.24.2-rancher1-1"
+		name = tt.name + " Kubernetes version: " + kubeVersion
+		cni := "calico"
+		name += " cni: " + cni
+		c.Run(name, func() {
+			testSession := session.NewSession(c.T())
+			defer testSession.Cleanup()
 
-					client, err := tt.client.WithSession(testSession)
-					require.NoError(c.T(), err)
+			client, err := tt.client.WithSession(testSession)
+			require.NoError(c.T(), err)
 
-					numNodes := len(tt.nodeRoles)
-					nodes, err := externalNodeProvider.NodeCreationFunc(client, numNodes)
-					require.NoError(c.T(), err)
+			numNodes := len(tt.nodeRoles)
+			nodes, err := externalNodeProvider.NodeCreationFunc(client, numNodes)
+			require.NoError(c.T(), err)
 
-					clusterName := provisioning.AppendRandomString(externalNodeProvider.Name)
+			clusterName := provisioning.AppendRandomString(externalNodeProvider.Name)
 
-					cluster := clusters.NewRKE2ClusterConfig(clusterName, namespace, cni, "", kubeVersion, nil)
+			cluster := clusters.NewRKE2ClusterConfig(clusterName, namespace, cni, "", kubeVersion, nil)
 
-					clusterResp, err := clusters.CreateRKE2Cluster(client, cluster)
-					require.NoError(c.T(), err)
+			clusterResp, err := clusters.CreateRKE2Cluster(client, cluster)
+			require.NoError(c.T(), err)
 
-					client, err = client.ReLogin()
-					require.NoError(c.T(), err)
+			client, err = client.ReLogin()
+			require.NoError(c.T(), err)
 
-					customCluster, err := client.Provisioning.Cluster.ByID(clusterResp.ID)
-					require.NoError(c.T(), err)
+			customCluster, err := client.Provisioning.Cluster.ByID(clusterResp.ID)
+			require.NoError(c.T(), err)
 
-					token, err := tokenregistration.GetRegistrationToken(client, customCluster.Status.ClusterName)
-					require.NoError(c.T(), err)
+			token, err := tokenregistration.GetRegistrationToken(client, customCluster.Status.ClusterName)
+			require.NoError(c.T(), err)
 
-					for key, node := range nodes {
-						c.T().Logf("Execute Registration Command for node %s", node.NodeID)
-						command := fmt.Sprintf("%s %s", token.InsecureNodeCommand, tt.nodeRoles[key])
+			for key, node := range nodes {
+				c.T().Logf("Execute Registration Command for node %s", node.NodeID)
+				command := fmt.Sprintf("%s %s", token.InsecureNodeCommand, tt.nodeRoles[key])
 
-						output, err := node.ExecuteCommand(command)
-						require.NoError(c.T(), err)
-						c.T().Logf(output)
-					}
-
-					kubeProvisioningClient, err := c.client.GetKubeAPIProvisioningClient()
-					require.NoError(c.T(), err)
-
-					result, err := kubeProvisioningClient.Clusters(namespace).Watch(context.TODO(), metav1.ListOptions{
-						FieldSelector:  "metadata.name=" + clusterName,
-						TimeoutSeconds: &defaults.WatchTimeoutSeconds,
-					})
-					require.NoError(c.T(), err)
-
-					checkFunc := clusters.IsProvisioningClusterReady
-
-					err = wait.WatchWait(result, checkFunc)
-					assert.NoError(c.T(), err)
-					assert.Equal(c.T(), clusterName, clusterResp.ObjectMeta.Name)
-
-					clusterToken, err := clusters.CheckServiceAccountTokenSecret(client, clusterName)
-					require.NoError(c.T(), err)
-					assert.NotEmpty(c.T(), clusterToken)
-				})
+				output, err := node.ExecuteCommand(command)
+				require.NoError(c.T(), err)
+				c.T().Logf(output)
 			}
-		}
+
+			kubeProvisioningClient, err := c.client.GetKubeAPIProvisioningClient()
+			require.NoError(c.T(), err)
+
+			result, err := kubeProvisioningClient.Clusters(namespace).Watch(context.TODO(), metav1.ListOptions{
+				FieldSelector:  "metadata.name=" + clusterName,
+				TimeoutSeconds: &defaults.WatchTimeoutSeconds,
+			})
+			require.NoError(c.T(), err)
+
+			checkFunc := clusters.IsProvisioningClusterReady
+
+			err = wait.WatchWait(result, checkFunc)
+			assert.NoError(c.T(), err)
+			assert.Equal(c.T(), clusterName, clusterResp.ObjectMeta.Name)
+
+			clusterToken, err := clusters.CheckServiceAccountTokenSecret(client, clusterName)
+			require.NoError(c.T(), err)
+			assert.NotEmpty(c.T(), clusterToken)
+		})
 	}
 }
 
@@ -258,10 +256,12 @@ func (c *CustomClusterProvisioningTestSuite) ProvisioningRKE2CustomClusterDynami
 }
 
 func (c *CustomClusterProvisioningTestSuite) TestProvisioningCustomCluster() {
-	for _, nodeProviderName := range c.nodeProviders {
-		externalNodeProvider := provisioning.ExternalNodeProviderSetup(nodeProviderName)
-		c.ProvisioningRKE2CustomCluster(externalNodeProvider)
-	}
+	// for _, nodeProviderName := range c.nodeProviders {
+	// 	externalNodeProvider := provisioning.ExternalNodeProviderSetup(nodeProviderName)
+	// 	c.ProvisioningRKE2CustomCluster(externalNodeProvider)
+	// }
+	externalNodeProvider := provisioning.ExternalNodeProviderSetup("ec2")
+	c.ProvisioningRKE2CustomCluster(externalNodeProvider)
 }
 
 func (c *CustomClusterProvisioningTestSuite) TestProvisioningCustomClusterDynamicInput() {
