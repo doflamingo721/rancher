@@ -70,7 +70,7 @@ func (r *RKE2EtcdSnapshotRestoreTestSuite) TestEtcdSnapshotRestoreFreshCluster(p
 	name := fmt.Sprintf("Provider_%s/Kubernetes_Version_%s/Nodes_%v", provider.Name, kubeVersion, nodesAndRoles)
 	r.Run(name, func() {
 		testSession := session.NewSession(r.T())
-		defer testSession.Cleanup()
+		// defer testSession.Cleanup()
 
 		testSessionClient, err := r.client.WithSession(testSession)
 		require.NoError(r.T(), err)
@@ -86,32 +86,61 @@ func (r *RKE2EtcdSnapshotRestoreTestSuite) TestEtcdSnapshotRestoreFreshCluster(p
 
 		cluster := clusters.NewRKE2ClusterConfig(clusterName, namespace, cni, credential.ID, kubeVersion, machinePools)
 
-		//clusters.CreateRKE2Cluster(testSessionClient, cluster)
-
 		clusterResp, err := clusters.CreateRKE2Cluster(testSessionClient, cluster)
 		require.NoError(r.T(), err)
 
-		kubeRKEClient, err := r.client.GetKubeAPIRKEClient()
+		// kubeRKEClient, err := r.client.GetKubeAPIRKEClient()
+		// require.NoError(r.T(), err)
+
+		// result, err := kubeRKEClient.RKEControlPlanes(namespace).Watch(context.TODO(), metav1.ListOptions{
+
+		// 	FieldSelector:  "metadata.name=" + cluster.ID,
+		// 	TimeoutSeconds: &defaults.WatchTimeoutSeconds,
+		// })
+		// require.NoError(r.T(), err)
+
+		// checkFunc := clusters.IsProvisioningClusterReady
+
+		// err = wait.WatchWait(result, checkFunc)
+		// assert.NoError(r.T(), err)
+		// assert.Equal(r.T(), clusterName, clusterResp.ObjectMeta.Name)
+
+		kubeProvisioningClient, err := r.client.GetKubeAPIProvisioningClient()
 		require.NoError(r.T(), err)
 
-		result, err := kubeRKEClient.RKEControlPlanes(namespace).Watch(context.TODO(), metav1.ListOptions{
+		// testPlanEntry, err := planner_test.createTestPlanEntry("linux")
 
-			FieldSelector:  "metadata.name=" + cluster.ID,
+		// controlPlane, err := planner_test.createTestControlPlane("1.24.2+rke2r1")
+
+		// testPlan, err := planner.generateEtcdSnapshotCreatePlan(controlPlane, testPlanEntry)
+
+		// planner.createEtcdSnapshot(controlPlane, testPlan.Secret, testPlan.Plan)
+
+		result, err := kubeProvisioningClient.Clusters(namespace).Watch(context.TODO(), metav1.ListOptions{
+			FieldSelector:  "metadata.name=" + clusterName,
 			TimeoutSeconds: &defaults.WatchTimeoutSeconds,
 		})
 		require.NoError(r.T(), err)
 
 		checkFunc := clusters.IsProvisioningClusterReady
-
+		fmt.Println("CheckFunc ")
+		fmt.Println("Before WaitWatch ")
 		err = wait.WatchWait(result, checkFunc)
+		fmt.Println("After WaitWatch ")
 		assert.NoError(r.T(), err)
 		assert.Equal(r.T(), clusterName, clusterResp.ObjectMeta.Name)
+
+		clusterToken, err := clusters.CheckServiceAccountTokenSecret(testSessionClient, clusterName)
+		require.NoError(r.T(), err)
+		assert.NotEmpty(r.T(), clusterToken)
 
 		cluster, err = r.client.Provisioning.Cluster.ByID(clusterResp.ID)
 		require.NoError(r.T(), err)
 		require.NotNil(r.T(), cluster.Status)
 
 		require.NoError(r.T(), r.createSnapshot(clusterName, 1))
+		fmt.Println("After createSnapshot call")
+		fmt.Println("cluster name is: ", clusterName)
 		// verify status
 		r.client.Provisioning.Cluster.ByID(clusterResp.ID)
 		require.NoError(r.T(), err)
@@ -121,7 +150,7 @@ func (r *RKE2EtcdSnapshotRestoreTestSuite) TestEtcdSnapshotRestoreFreshCluster(p
 }
 
 func (r *RKE2EtcdSnapshotRestoreTestSuite) createSnapshot(id string, generation int) error {
-
+	fmt.Println("Inside snapshot function")
 	kubeProvisioningClient, err := r.client.GetKubeAPIProvisioningClient()
 	require.NoError(r.T(), err)
 
@@ -134,26 +163,52 @@ func (r *RKE2EtcdSnapshotRestoreTestSuite) createSnapshot(id string, generation 
 		Generation: generation,
 	}
 
+	fmt.Println("etcdsnapshot:  ", cluster.Spec.RKEConfig.ETCDSnapshotCreate)
+	// time.Sleep(100000000000000000)
+
+	fmt.Println("before update")
 	cluster, err = kubeProvisioningClient.Clusters(namespace).Update(context.TODO(), cluster, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
 
-	kubeRKEClient, err := r.client.GetKubeAPIRKEClient()
-	require.NoError(r.T(), err)
+	fmt.Println("after update", cluster)
+	// time.Sleep(100000000000000000)
+	// kubeRKEClient, err := r.client.GetKubeAPIRKEClient()
+	// require.NoError(r.T(), err)
 
-	result, err := kubeRKEClient.RKEControlPlanes(namespace).Watch(context.TODO(), metav1.ListOptions{
+	// fmt.Println("Before WaitWatch ")
+
+	// result, err := kubeRKEClient.RKEControlPlanes(namespace).Watch(context.TODO(), metav1.ListOptions{
+	// 	FieldSelector:  "metadata.name=" + cluster.ObjectMeta.Name,
+	// 	TimeoutSeconds: &defaults.WatchTimeoutSeconds,
+	// })
+	// require.NoError(r.T(), err)
+
+	// checkFunc := clusters.IsProvisioningClusterReady
+
+	// err = wait.WatchWait(result, checkFunc)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+
+	fmt.Println("Before WaitWatch ")
+
+	result, err := kubeProvisioningClient.Clusters(namespace).Watch(context.TODO(), metav1.ListOptions{
 		FieldSelector:  "metadata.name=" + cluster.ObjectMeta.Name,
 		TimeoutSeconds: &defaults.WatchTimeoutSeconds,
 	})
 	require.NoError(r.T(), err)
 
 	checkFunc := clusters.IsProvisioningClusterReady
+	fmt.Println("CheckFunc ")
 
 	err = wait.WatchWait(result, checkFunc)
-	if err != nil {
-		return err
-	}
+	fmt.Println("After WaitWatch ")
+	assert.NoError(r.T(), err)
+	// assert.Equal(r.T(), clusterresponse.Status.ClusterName, clusterresponse.ObjectMeta.Name)
+
+	// time.Sleep(100000000000000000)
 
 	return nil
 }
