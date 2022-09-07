@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	rkev1 "github.com/rancher/rancher/pkg/apis/rke.cattle.io/v1"
 	"github.com/rancher/rancher/tests/framework/clients/rancher"
@@ -70,81 +69,55 @@ func (r *RKE2EtcdSnapshotRestoreTestSuite) SetupSuite() {
 func (r *RKE2EtcdSnapshotRestoreTestSuite) TestEtcdSnapshotRestoreFreshCluster(provider Provider, kubeVersion string, cni string, nodesAndRoles []machinepools.NodeRoles, credential *cloudcredentials.CloudCredential) {
 	name := fmt.Sprintf("Provider_%s/Kubernetes_Version_%s/Nodes_%v", provider.Name, kubeVersion, nodesAndRoles)
 	r.Run(name, func() {
-		// testSession := session.NewSession(r.T())
-		// defer testSession.Cleanup()
+		testSession := session.NewSession(r.T())
+		defer testSession.Cleanup()
 
-		// testSessionClient, err := r.client.WithSession(testSession)
-		// require.NoError(r.T(), err)
+		testSessionClient, err := r.client.WithSession(testSession)
+		require.NoError(r.T(), err)
 
-		// clusterName := provisioning.AppendRandomString(fmt.Sprintf("%s-%s", r.clusterName, provider.Name))
-		// generatedPoolName := fmt.Sprintf("nc-%s-pool1-", clusterName)
-		// machinePoolConfig := provider.MachinePoolFunc(generatedPoolName, namespace)
+		clusterName := provisioning.AppendRandomString(fmt.Sprintf("%s-%s", r.clusterName, provider.Name))
+		generatedPoolName := fmt.Sprintf("nc-%s-pool1-", clusterName)
+		machinePoolConfig := provider.MachinePoolFunc(generatedPoolName, namespace)
 
-		// machineConfigResp, err := machinepools.CreateMachineConfig(provider.MachineConfig, machinePoolConfig, testSessionClient)
-		// require.NoError(r.T(), err)
+		machineConfigResp, err := machinepools.CreateMachineConfig(provider.MachineConfig, machinePoolConfig, testSessionClient)
+		require.NoError(r.T(), err)
 
-		// machinePools := machinepools.RKEMachinePoolSetup(nodesAndRoles, machineConfigResp)
+		machinePools := machinepools.RKEMachinePoolSetup(nodesAndRoles, machineConfigResp)
 
-		// cluster := clusters.NewRKE2ClusterConfig(clusterName, namespace, cni, credential.ID, kubeVersion, machinePools)
+		cluster := clusters.NewRKE2ClusterConfig(clusterName, namespace, cni, credential.ID, kubeVersion, machinePools)
 
-		// clusterResp, err := clusters.CreateRKE2Cluster(testSessionClient, cluster)
-		// require.NoError(r.T(), err)
+		clusterResp, err := clusters.CreateRKE2Cluster(testSessionClient, cluster)
+		require.NoError(r.T(), err)
 
-		// kubeRKEClient, err := r.client.GetKubeAPIRKEClient()
-		// require.NoError(r.T(), err)
+		kubeProvisioningClient, err := r.client.GetKubeAPIProvisioningClient()
+		require.NoError(r.T(), err)
 
-		// result, err := kubeRKEClient.RKEControlPlanes(namespace).Watch(context.TODO(), metav1.ListOptions{
+		result, err := kubeProvisioningClient.Clusters(namespace).Watch(context.TODO(), metav1.ListOptions{
+			FieldSelector:  "metadata.name=" + clusterName,
+			TimeoutSeconds: &defaults.WatchTimeoutSeconds,
+		})
+		require.NoError(r.T(), err)
 
-		// 	FieldSelector:  "metadata.name=" + cluster.ID,
-		// 	TimeoutSeconds: &defaults.WatchTimeoutSeconds,
-		// })
-		// require.NoError(r.T(), err)
+		checkFunc := clusters.IsProvisioningClusterReady
+		fmt.Println("CheckFunc ")
+		fmt.Println("Before WaitWatch ")
+		err = wait.WatchWait(result, checkFunc)
+		fmt.Println("After WaitWatch ")
+		assert.NoError(r.T(), err)
+		assert.Equal(r.T(), clusterName, clusterResp.ObjectMeta.Name)
 
-		// checkFunc := clusters.IsProvisioningClusterReady
+		clusterToken, err := clusters.CheckServiceAccountTokenSecret(testSessionClient, clusterName)
+		require.NoError(r.T(), err)
+		assert.NotEmpty(r.T(), clusterToken)
 
-		// err = wait.WatchWait(result, checkFunc)
-		// assert.NoError(r.T(), err)
-		// assert.Equal(r.T(), clusterName, clusterResp.ObjectMeta.Name)
+		cluster, err = r.client.Provisioning.Cluster.ByID(clusterResp.ID)
+		require.NoError(r.T(), err)
+		require.NotNil(r.T(), cluster.Status)
 
-		// kubeProvisioningClient, err := r.client.GetKubeAPIProvisioningClient()
-		// require.NoError(r.T(), err)
-
-		// testPlanEntry, err := planner_test.createTestPlanEntry("linux")
-
-		// controlPlane, err := planner_test.createTestControlPlane("1.24.2+rke2r1")
-
-		// testPlan, err := planner.generateEtcdSnapshotCreatePlan(controlPlane, testPlanEntry)
-
-		// planner.createEtcdSnapshot(controlPlane, testPlan.Secret, testPlan.Plan)
-
-		// result, err := kubeProvisioningClient.Clusters(namespace).Watch(context.TODO(), metav1.ListOptions{
-		// 	FieldSelector:  "metadata.name=" + clusterName,
-		// 	TimeoutSeconds: &defaults.WatchTimeoutSeconds,
-		// })
-		// require.NoError(r.T(), err)
-
-		// checkFunc := clusters.IsProvisioningClusterReady
-		// fmt.Println("CheckFunc ")
-		// fmt.Println("Before WaitWatch ")
-		// err = wait.WatchWait(result, checkFunc)
-		// fmt.Println("After WaitWatch ")
-		// assert.NoError(r.T(), err)
-		// assert.Equal(r.T(), clusterName, clusterResp.ObjectMeta.Name)
-
-		// clusterToken, err := clusters.CheckServiceAccountTokenSecret(testSessionClient, clusterName)
-		// require.NoError(r.T(), err)
-		// assert.NotEmpty(r.T(), clusterToken)
-
-		// cluster, err = r.client.Provisioning.Cluster.ByID(clusterResp.ID)
-		// require.NoError(r.T(), err)
-		// require.NotNil(r.T(), cluster.Status)
-
-		require.NoError(r.T(), r.createSnapshot("auto--aws-hcadx", 3))
+		// require.NoError(r.T(), r.createSnapshot(clusterName, 3))
+		// time.Sleep(30 * time.Second)
+		require.NoError(r.T(), r.restoreSnapshot(clusterName, "auto--aws-hcadx-on-demand-auto--aws-hcadx-pool0-f737293b-728c74", 3, "all"))
 		fmt.Println("After createSnapshot call")
-		// // verify status
-		// r.client.Provisioning.Cluster.ByID(clusterResp.ID)
-		// require.NoError(r.T(), err)
-		// r.T().Logf("Successfully created Snapshot for cluster: %s", name)
 
 	})
 }
@@ -173,24 +146,6 @@ func (r *RKE2EtcdSnapshotRestoreTestSuite) createSnapshot(id string, generation 
 	}
 
 	fmt.Println("after update", cluster)
-	// time.Sleep(100000000000000000)
-	// kubeRKEClient, err := r.client.GetKubeAPIRKEClient()
-	// require.NoError(r.T(), err)
-
-	// fmt.Println("Before WaitWatch ")
-
-	// result, err := kubeRKEClient.RKEControlPlanes(namespace).Watch(context.TODO(), metav1.ListOptions{
-	// 	FieldSelector:  "metadata.name=" + cluster.ObjectMeta.Name,
-	// 	TimeoutSeconds: &defaults.WatchTimeoutSeconds,
-	// })
-	// require.NoError(r.T(), err)
-
-	// checkFunc := clusters.IsProvisioningClusterReady
-
-	// err = wait.WatchWait(result, checkFunc)
-	// 	if err != nil {
-	// 		return err
-	// 	}
 
 	fmt.Println("Before WaitWatch ")
 
@@ -208,15 +163,26 @@ func (r *RKE2EtcdSnapshotRestoreTestSuite) createSnapshot(id string, generation 
 	assert.NoError(r.T(), err)
 	// assert.Equal(r.T(), clusterresponse.Status.ClusterName, clusterresponse.ObjectMeta.Name)
 
-	time.Sleep(30 * time.Second)
+	return nil
+}
 
-	cluster.Spec.RKEConfig.ETCDSnapshotRestore = &rkev1.ETCDSnapshotRestore{
+func (r *RKE2EtcdSnapshotRestoreTestSuite) restoreSnapshot(id string, name string, generation int, restoreconfig string) error {
+	fmt.Println("Inside snapshotRestore function")
+	kubeProvisioningClient, err := r.client.GetKubeAPIProvisioningClient()
+	require.NoError(r.T(), err)
+
+	cluster, err := kubeProvisioningClient.Clusters(namespace).Get(context.TODO(), id, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	snapshot.
+		cluster.Spec.RKEConfig.ETCDSnapshotRestore = &rkev1.ETCDSnapshotRestore{
 		Name:             "auto--aws-hcadx-on-demand-auto--aws-hcadx-pool0-f737293b-029706",
 		Generation:       generation,
 		RestoreRKEConfig: "all",
 	}
 
-	fmt.Println("before update")
+	fmt.Println("before cluster update")
 	cluster, err = kubeProvisioningClient.Clusters(namespace).Update(context.TODO(), cluster, metav1.UpdateOptions{})
 	if err != nil {
 		return err
@@ -236,8 +202,6 @@ func (r *RKE2EtcdSnapshotRestoreTestSuite) createSnapshot(id string, generation 
 	err = wait.WatchWait(results, checkFuncs)
 	fmt.Println("restore After WaitWatch ")
 	assert.NoError(r.T(), err)
-
-	time.Sleep(100000000000000000)
 
 	return nil
 }
