@@ -3,7 +3,6 @@ package rke2
 import (
 	"context"
 	"fmt"
-	"testing"
 
 	"github.com/rancher/rancher/tests/framework/clients/rancher"
 	management "github.com/rancher/rancher/tests/framework/clients/rancher/generated/management/v3"
@@ -376,6 +375,6 @@ func (r *RKE2NodeDriverProvisioningTestSuite) TestCNIProvisioning() {
 
 // In order for 'go test' to run this suite, we need to create
 // a normal test function and pass our suite to suite.Run
-func TestRKE2ProvisioningTestSuite(t *testing.T) {
-	suite.Run(t, new(RKE2NodeDriverProvisioningTestSuite))
-}
+// func TestRKE2ProvisioningTestSuite(t *testing.T) {
+// 	suite.Run(t, new(RKE2NodeDriverProvisioningTestSuite))
+// }
