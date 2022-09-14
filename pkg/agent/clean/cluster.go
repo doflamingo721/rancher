@@ -28,11 +28,9 @@ import (
 	"github.com/rancher/rancher/pkg/controllers/managementuserlegacy/helm"
 	"github.com/rancher/rancher/pkg/monitoring"
 	"github.com/rancher/rancher/pkg/namespace"
-	"github.com/rancher/rancher/pkg/pipeline/utils"
 	"github.com/sirupsen/logrus"
 	apierror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -406,22 +404,6 @@ func processErrors(errs []error) error {
 		errorString += fmt.Sprintf("%s ", err)
 	}
 	return errors.New(errorString)
-}
-
-func getProjectPipelineNamespaces(client *kubernetes.Clientset) ([]string, error) {
-	var list []string
-	nsList, err := client.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{
-		LabelSelector: labels.Set(map[string]string{
-			utils.PipelineNamespaceLabel: "true",
-		}).AsSelector().String(),
-	})
-	if err != nil {
-		return nil, err
-	}
-	for _, ns := range nsList.Items {
-		list = append(list, ns.Name)
-	}
-	return list, nil
 }
 
 func getProjectMonitoringNamespaces(client *kubernetes.Clientset) ([]string, error) {
