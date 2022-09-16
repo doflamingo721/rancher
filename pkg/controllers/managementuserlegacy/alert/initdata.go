@@ -362,10 +362,6 @@ var entries = []entry{
 						DisplayName: "Manual Cluster Scan Completed",
 						TimingField: defaultTimingField,
 					},
-					ClusterScanRule: &v32.ClusterScanRule{
-						ScanRunType:  v32.ClusterScanRunTypeManual,
-						FailuresOnly: false,
-					},
 				},
 				Status: v32.AlertStatus{
 					AlertState: "inactive",
@@ -380,10 +376,6 @@ var entries = []entry{
 						Severity:    SeverityWarning,
 						DisplayName: "Manual Cluster Scan has Failures",
 						TimingField: defaultTimingField,
-					},
-					ClusterScanRule: &v32.ClusterScanRule{
-						ScanRunType:  v32.ClusterScanRunTypeManual,
-						FailuresOnly: true,
 					},
 				},
 				Status: v32.AlertStatus{
@@ -400,10 +392,6 @@ var entries = []entry{
 						DisplayName: "Scheduled Cluster Scan Completed",
 						TimingField: defaultTimingField,
 					},
-					ClusterScanRule: &v32.ClusterScanRule{
-						ScanRunType:  v32.ClusterScanRunTypeScheduled,
-						FailuresOnly: false,
-					},
 				},
 				Status: v32.AlertStatus{
 					AlertState: "inactive",
@@ -418,10 +406,6 @@ var entries = []entry{
 						Severity:    SeverityWarning,
 						DisplayName: "Scheduled Cluster Scan has Failures",
 						TimingField: defaultTimingField,
-					},
-					ClusterScanRule: &v32.ClusterScanRule{
-						ScanRunType:  v32.ClusterScanRunTypeScheduled,
-						FailuresOnly: true,
 					},
 				},
 				Status: v32.AlertStatus{
