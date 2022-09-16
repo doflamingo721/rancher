@@ -37,8 +37,6 @@ var (
 	CatalogResourceName                                 = "catalogs"
 	CatalogTemplateResourceName                         = "catalogtemplates"
 	CatalogTemplateVersionResourceName                  = "catalogtemplateversions"
-	CisBenchmarkVersionResourceName                     = "cisbenchmarkversions"
-	CisConfigResourceName                               = "cisconfigs"
 	CloudCredentialResourceName                         = "cloudcredentials"
 	ClusterResourceName                                 = "clusters"
 	ClusterAlertResourceName                            = "clusteralerts"
@@ -49,7 +47,6 @@ var (
 	ClusterMonitorGraphResourceName                     = "clustermonitorgraphs"
 	ClusterRegistrationTokenResourceName                = "clusterregistrationtokens"
 	ClusterRoleTemplateBindingResourceName              = "clusterroletemplatebindings"
-	ClusterScanResourceName                             = "clusterscans"
 	ClusterTemplateResourceName                         = "clustertemplates"
 	ClusterTemplateRevisionResourceName                 = "clustertemplaterevisions"
 	ComposeConfigResourceName                           = "composeconfigs"
@@ -147,10 +144,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&CatalogTemplateList{},
 		&CatalogTemplateVersion{},
 		&CatalogTemplateVersionList{},
-		&CisBenchmarkVersion{},
-		&CisBenchmarkVersionList{},
-		&CisConfig{},
-		&CisConfigList{},
 		&CloudCredential{},
 		&CloudCredentialList{},
 		&Cluster{},
@@ -171,8 +164,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ClusterRegistrationTokenList{},
 		&ClusterRoleTemplateBinding{},
 		&ClusterRoleTemplateBindingList{},
-		&ClusterScan{},
-		&ClusterScanList{},
 		&ClusterTemplate{},
 		&ClusterTemplateList{},
 		&ClusterTemplateRevision{},
