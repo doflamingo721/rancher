@@ -63,7 +63,6 @@ type Interface interface {
 	GlobalDnsProvidersGetter
 	KontainerDriversGetter
 	EtcdBackupsGetter
-	ClusterScansGetter
 	MonitorMetricsGetter
 	ClusterMonitorGraphsGetter
 	ProjectMonitorGraphsGetter
@@ -826,20 +825,6 @@ func (c *Client) EtcdBackups(namespace string) EtcdBackupInterface {
 	sharedClient := c.clientFactory.ForResourceKind(EtcdBackupGroupVersionResource, EtcdBackupGroupVersionKind.Kind, true)
 	objectClient := objectclient.NewObjectClient(namespace, sharedClient, &EtcdBackupResource, EtcdBackupGroupVersionKind, etcdBackupFactory{})
 	return &etcdBackupClient{
-		ns:           namespace,
-		client:       c,
-		objectClient: objectClient,
-	}
-}
-
-type ClusterScansGetter interface {
-	ClusterScans(namespace string) ClusterScanInterface
-}
-
-func (c *Client) ClusterScans(namespace string) ClusterScanInterface {
-	sharedClient := c.clientFactory.ForResourceKind(ClusterScanGroupVersionResource, ClusterScanGroupVersionKind.Kind, true)
-	objectClient := objectclient.NewObjectClient(namespace, sharedClient, &ClusterScanResource, ClusterScanGroupVersionKind, clusterScanFactory{})
-	return &clusterScanClient{
 		ns:           namespace,
 		client:       c,
 		objectClient: objectClient,
