@@ -20,7 +20,6 @@ import (
 	v3 "github.com/rancher/rancher/pkg/generated/norman/management.cattle.io/v3"
 	pv3 "github.com/rancher/rancher/pkg/generated/norman/project.cattle.io/v3"
 	monitorutil "github.com/rancher/rancher/pkg/monitoring"
-	"github.com/rancher/rancher/pkg/project"
 	"github.com/rancher/rancher/pkg/ref"
 	"github.com/rancher/rancher/pkg/types/config"
 	"github.com/rancher/rancher/pkg/types/config/dialer"
@@ -79,22 +78,6 @@ func (h *ClusterGraphHandler) QuerySeriesAction(actionName string, action *types
 	token, err = getAuthToken(userContext, prometheusName, prometheusNamespace)
 	if err != nil {
 		return err
-	}
-
-	if inputParser.Input.Filters["resourceType"] == "istiocluster" {
-		inputParser.Input.MetricParams["namespace"] = ".*"
-
-		project, err := project.GetSystemProject(clusterName, h.projectLister)
-		if err != nil {
-			return err
-		}
-		app, err := h.appLister.Get(project.Name, monitorutil.IstioAppName)
-		if err != nil {
-			return err
-		}
-		svcName, svcNamespace, svcPort = monitorutil.IstioPrometheusEndpoint(app.Spec.Answers)
-	} else {
-		svcName, svcNamespace, svcPort = monitorutil.ClusterPrometheusEndpoint()
 	}
 
 	prometheusQuery, err := NewPrometheusQuery(reqContext, clusterName, token, svcNamespace, svcName, svcPort, h.dialerFactory, userContext)

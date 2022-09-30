@@ -180,7 +180,6 @@ type ClusterStatus struct {
 	NodeCount                            int                         `json:"nodeCount,omitempty" norman:"nocreate,noupdate"`
 	LinuxWorkerCount                     int                         `json:"linuxWorkerCount,omitempty" norman:"nocreate,noupdate"`
 	WindowsWorkerCount                   int                         `json:"windowsWorkerCount,omitempty" norman:"nocreate,noupdate"`
-	IstioEnabled                         bool                        `json:"istioEnabled,omitempty" norman:"nocreate,noupdate,default=false"`
 	CertificatesExpiration               map[string]CertExpiration   `json:"certificatesExpiration,omitempty"`
 	ScheduledClusterScanStatus           *ScheduledClusterScanStatus `json:"scheduledClusterScanStatus,omitempty"`
 	CurrentCisRunName                    string                      `json:"currentCisRunName,omitempty"`
