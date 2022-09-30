@@ -25,7 +25,6 @@ const (
 	ClusterStatusFieldEKSStatus                            = "eksStatus"
 	ClusterStatusFieldFailedSpec                           = "failedSpec"
 	ClusterStatusFieldGKEStatus                            = "gkeStatus"
-	ClusterStatusFieldIstioEnabled                         = "istioEnabled"
 	ClusterStatusFieldLimits                               = "limits"
 	ClusterStatusFieldLinuxWorkerCount                     = "linuxWorkerCount"
 	ClusterStatusFieldMonitoringStatus                     = "monitoringStatus"
@@ -69,7 +68,6 @@ type ClusterStatus struct {
 	EKSStatus                            *EKSStatus                  `json:"eksStatus,omitempty" yaml:"eksStatus,omitempty"`
 	FailedSpec                           *ClusterSpec                `json:"failedSpec,omitempty" yaml:"failedSpec,omitempty"`
 	GKEStatus                            *GKEStatus                  `json:"gkeStatus,omitempty" yaml:"gkeStatus,omitempty"`
-	IstioEnabled                         bool                        `json:"istioEnabled,omitempty" yaml:"istioEnabled,omitempty"`
 	Limits                               map[string]string           `json:"limits,omitempty" yaml:"limits,omitempty"`
 	LinuxWorkerCount                     int64                       `json:"linuxWorkerCount,omitempty" yaml:"linuxWorkerCount,omitempty"`
 	MonitoringStatus                     *MonitoringStatus           `json:"monitoringStatus,omitempty" yaml:"monitoringStatus,omitempty"`
