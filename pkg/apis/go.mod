@@ -2,7 +2,7 @@ module github.com/rancher/rancher/pkg/apis
 
 go 1.19
 
-replace k8s.io/client-go => github.com/doflamingo721/client-go v1.26.5-rancher1
+replace k8s.io/client-go => github.com/doflamingo721/client-go v1.26.5-rancher2
 
 require (
 	github.com/rancher/aks-operator v1.1.1-rc2
